@@ -13,3 +13,9 @@ git clone https://github.com/hackingthemarkets/interactive-brokers-web-api.git
 ```
 docker-compose up
 ```
+
+## Getting a command line prompt
+
+```
+docker exec -it ibkr bash
+```

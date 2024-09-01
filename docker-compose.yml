@@ -2,6 +2,8 @@ version: '3.8'
 services:
   web:
     build: .
+    image: ibkr-rest-api
+    container_name: ibkr
     environment:
       IBKR_ACCOUNT_ID: "U1234567"
     ports:
