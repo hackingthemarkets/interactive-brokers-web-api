@@ -1,2 +1,6 @@
-# interactive-brokers-web-api
-A docker container and flask app for use with the Interactive Brokers Web API 1.0
+# Interactive Brokers Web API
+
+```
+git clone https://github.com/hackingthemarkets/interactive-brokers-web-api.git
+docker-compose up
+```

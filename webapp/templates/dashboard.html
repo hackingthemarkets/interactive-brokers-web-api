@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>Dashboard</h2>
+
+<table class="table table-striped">
+    <tr>
+        <td>
+            Currency
+        </td>
+        <td>
+            {{ account.currency }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Account Type
+        </td>
+        <td>
+            {{ account.type }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Business Type
+        </td>
+        <td>
+            {{ account.businessType }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Cash
+        </td>
+        <td>
+            ${{ summary['totalcashvalue']['amount']|round(2) }}<br />
+        </td>
+    </tr>
+</table>
+
+{% endblock %}

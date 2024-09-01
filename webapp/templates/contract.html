@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="row mb-5">
+    <div class="col col-sm-9">
+        <h2>{{ contract.name }}</h2>
+        <h3>{{ contract.sector or "" }}</h3>
+        <p>{{ contract.listingExchange }}</p>    
+
+        <img src="https://charts2-node.finviz.com/chart.ashx?cs=l&t={{ contract.ticker }}&tf=d&s=linear&ct=candle_stick&tm=d&o[0][ot]=sma&o[0][op]=50&o[0][oc]=FF8F33C6&o[1][ot]=sma&o[1][op]=200&o[1][oc]=DCB3326D&o[2][ot]=sma&o[2][op]=20&o[2][oc]=DC32B363&o[3][ot]=patterns&o[3][op]=&o[3][oc]=000" />
+    </div>
+
+
+    <div class="col col-sm-3">
+        <h3>Order</h3>
+        <form action="/order" method="post">
+            Side
+            <select name="side" class="form-select">
+                <option value="BUY">Buy</option>
+                <option value="SELL">Sell</option>
+            </select>
+            Quantity
+            <input name="quantity" type="text" class="form-control" />
+            Price
+            <input name="price" type="text" class="form-control" />
+            <input name="contract_id" type="hidden" value="{{ contract.conid }}"/>
+            <input type="submit" class="mt-3 btn btn-primary" value="Place Limit Order" />
+        </form>
+    </div>
+</div>
+
+<h2>Price History</h2>
+
+<table class="table table-striped">
+    {% for item in price_history['data']|reverse %}
+    <tr>
+        <td>{{ item['t']|ctime }}</td>
+        <td>{{ item['o'] }}</td>
+        <td>{{ item['h'] }}</td>
+        <td>{{ item['l'] }}</td>
+        <td>{{ item['c'] }}</td>
+        <td>{{ item['v'] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

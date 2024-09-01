@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>Stock Lookup</h2>
+
+<div class="col col-sm-8">
+    <label>Enter a Stock Symbol</label>
+
+    <form action="" method="get">
+        <div class="input-group mb-3 mt-3">
+            <input name="symbol" type="text" class="form-control" placeholder="eg. AAPL">
+            <button class="btn btn-outline-secondary" type="submit">Lookup</button>
+        </div>
+    </form>
+
+    {% if stocks %}
+        <h3>Companies</h3>
+
+        <table class="table table-striped">
+            {% for stock in stocks %}
+            <tr>
+                <td>
+                    <a href="/contract/{{ stock['conid'] }}/365d">{{ stock['conid'] }}</a>
+                </td>
+                <td>{{ stock['companyName'] }}</td>
+                <td>{{ stock['symbol'] }}</td>
+                <td>{{ stock['companyHeader'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+    {% endif %}
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    environment:
+      IBKR_ACCOUNT_ID: "U1234567"
+    ports:
+      - "5055:5055"
+      - "5056:5056"
+    volumes:
+      - ./webapp:/app/webapp

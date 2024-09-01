@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>Positions</h2>
+
+<table class="table table-striped">
+    <tr>
+        <th>Instrument</th>
+        <th>Quantity</th>
+        <th>Average Cost</th>
+        <th>Current Price</th>
+        <th>Current Value</th>
+        <th>Profit / Loss</th>
+    </tr>
+
+    {% for item in positions %}
+    <tr>
+        <td>
+            <strong>
+                <a href="/contract/{{ item['conid'] }}/365d">{{ item['name'] }}</a>
+            </strong>
+            <br />
+            {{ item['contractDesc'] }}<br />
+            {{ item['conid'] }}
+        </td>
+        <td>{{ item['position'] }}</td>
+        <td>${{ item['avgCost'] }}</td>
+        <td>${{ item['mktPrice']|round(2) }}</td>
+        <td>${{ item['mktValue'] }}</td>
+        <td class="pt-4">
+            <span class="alert {% if item['unrealizedPnl'] >= 0 %}alert-success{% else %}alert-danger{% endif %}">
+                {{ item['unrealizedPnl'] }}
+            </span>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

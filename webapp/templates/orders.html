@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>Orders</h2>
+
+<table class="table table-striped">
+    <tr>
+        <th>Order ID</th>
+        <th>Ticker</th>
+        <th>Description</th>
+        <th>Company</th>
+        <th>Order Description</th>
+        <th>Order Type</th>
+        <th>Status</th>
+        <th>Cancel</th>
+    </tr>
+    {% for order in orders %}
+    <tr>
+        <td>
+            {{ order.orderId }}
+        </td>
+        <td>
+            {{ order.ticker }}
+        </td>
+        <td>
+            {{ order.description1 }}
+        </td>
+        <td>
+            {{ order.companyName }}
+        </td>
+        <td>
+            {{ order.orderDesc }}
+        </td>
+        <td>
+            {{ order.orderType }}
+        </td>
+        <td>
+            {{ order.status }}   
+        </td>
+        <td>
+            <a href="/orders/{{ order.orderId }}/cancel" class="btn btn-light">x</a><br />
+        </td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="8">No active orders</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% endblock %}

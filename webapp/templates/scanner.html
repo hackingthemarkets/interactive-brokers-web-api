@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>Market Scanner</h2>
+
+<div>
+    <form id="scan" action="" method="get">
+        <div class="row">
+            <div class="col col-sm-2">
+                <label>Instrument</label>
+                <select id="instrument" name="instrument" class="form-select">
+                    {% for key in scanner_map %}
+                        <option value="{{ key }}" {% if key == request.args.get('instrument') %}selected="selected"{% endif %}>
+                            {{ scanner_map[key]['display_name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col col-sm-2">
+                <label>Location</label>
+
+                <select id="location" name="location" class="form-select">
+                </select>
+            </div>
+            <div class="col col-sm-3">
+                <label>Filter</label>
+
+                <select id="filter" name="filter" class="form-select">
+                </select>
+            </div>
+            <div class="col col-sm-1">
+                <label>Value</label>
+                <input id="filter_value" name="filter_value" class="form-control" value="{{ request.args.get('filter_value', '') }}" />
+            </div>
+            <div class="col col-sm-2">
+                <label>Sort By</label>
+                <select id="sort" name="sort" class="form-select">
+              
+                </select>
+            </div>
+            <div class="col col-sm-1">
+                <br />
+                <input type="hidden" name="submitted" value="submitted" />
+                <input type="submit" id="submit_scan" class="btn btn-success" value="Scan" />
+            </div>
+        </div>
+    </form>
+
+
+    <h3>Results</h3>
+
+    <table class="table table-striped">    
+    {% for contract in scan_results['contracts'] %}
+        <tr>
+            <td>
+                <h4>
+                    <a href="/contract/{{ contract['con_id'] }}/365d">{{ contract['symbol'] }}</a>
+                </h4>
+                {{ contract['company_name'] }}<br />
+
+                <br />
+                <img style="width: 100%" src="https://charts2-node.finviz.com/chart.ashx?cs=l&t={{ contract['symbol'] }}&tf=d&s=linear&ct=candle_stick&tm=d&o[0][ot]=sma&o[0][op]=50&o[0][oc]=FF8F33C6&o[1][ot]=sma&o[1][op]=200&o[1][oc]=DCB3326D&o[2][ot]=sma&o[2][op]=20&o[2][oc]=DC32B363&o[3][ot]=patterns&o[3][op]=&o[3][oc]=000" />
+            </td>
+        </tr>
+    {% endfor %}
+    </table>
+
+    {% if stocks %}
+        <h3>Companies</h3>
+
+        <table class="table table-striped">
+            {% for stock in stocks %}
+            <tr>
+                <td>
+                    <a href="/contract/{{ stock['conid'] }}/365d">{{ stock['conid'] }}</a>
+                </td>
+                <td>{{ stock['companyName'] }}</td>
+                <td>{{ stock['symbol'] }}</td>
+                <td>{{ stock['companyHeader'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+    {% endif %}
+</div>
+
+<script type="text/javascript">
+const scannerMap = {{ scanner_map|safe }};
+const filterMap = {{ filter_map|safe }}
+const instrument = document.getElementById('instrument');
+const instrumentLocation = document.getElementById('location');
+const filter = document.getElementById('filter');
+const sort = document.getElementById('sort');
+
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+
+filter.addEventListener('change', (event) => {
+    const key = event.target.value;
+});
+
+instrument.addEventListener('change', (event) => {
+    const key = event.target.value;
+    const locations = scannerMap[key]['locations'];
+    const filters = scannerMap[key]['filters'];
+    const sorts = scannerMap[key]['sorts'];
+    instrumentLocation.innerHTML = '';
+    filter.innerHTML = '';
+    sort.innerHTML = '';
+
+    sorts.map((item) => {
+        //console.log(item);
+        const option = document.createElement("option");
+        option.value = item.code;
+        option.text = item.name
+        if (urlParams.get('sort') == option.value) {
+            option.selected = true;
+        }
+
+        sort.appendChild(option);
+    });
+
+    locations.map((item) => {
+        const option = document.createElement("option");
+        option.value = item.type;
+        option.text = item.display_name
+        if (urlParams.get('location') == option.value) {
+            option.selected = true;
+        }
+        instrumentLocation.appendChild(option);
+    });
+
+    filters.map((item) => {
+        Object.keys(filterMap).forEach(key => {
+            if (key.startsWith(item)) {
+                const option = document.createElement("option");
+                option.value = filterMap[key].code;
+                option.text = filterMap[key].display_name
+                if (urlParams.get('filter') == option.value) {
+                    option.selected = true;
+                }
+                filter.appendChild(option);
+            }
+        });
+    })
+
+    if (!urlParams.get('filter')) {
+        filter.value = 'priceAbove';
+    }
+
+    if (!urlParams.get('filter_value')) {
+        filter_value.value = 20;
+    }
+});
+
+instrument.dispatchEvent(new Event('change'));
+
+
+
+if (!urlParams.get('submitted')) {
+    const formElement = document.getElementById('scan');
+    // Submit the form programmatically
+    formElement.submit();
+}
+</script>
+{% endblock %}
