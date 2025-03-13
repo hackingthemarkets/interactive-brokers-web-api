@@ -1,13 +1,11 @@
 import requests, time, os, random
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 
 # disable warnings until you install a certificate
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 BASE_API_URL = "https://localhost:5055/v1/api"
-ACCOUNT_ID = os.environ['IBKR_ACCOUNT_ID']
-
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
@@ -16,67 +14,62 @@ app = Flask(__name__)
 def timectime(s):
     return time.ctime(s/1000)
 
-
-@app.route("/")
-def dashboard():
+def get_accounts():
+    """Get available accounts or return None if not authenticated"""
     try:
         r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
-        accounts = r.json()
-    except Exception as e:
+        return r.json()
+    except Exception:
+        return None
+
+@app.route("/")
+def root():
+    """Show accounts list or redirect to first account if only one exists"""
+    accounts = get_accounts()
+    if not accounts:
+        return 'Make sure you authenticate first then visit this page. <a href="https://localhost:5055">Log in</a>'
+    if len(accounts) == 1:
+        return redirect(url_for('account_dashboard', account_id=accounts[0]['id']))
+    return render_template("accounts.html", accounts=accounts)
+
+@app.route("/accounts/<account_id>")
+def account_dashboard(account_id):
+    """Show dashboard for a specific account"""
+    accounts = get_accounts()
+    if not accounts:
         return 'Make sure you authenticate first then visit this page. <a href="https://localhost:5055">Log in</a>'
 
-    account = accounts[0]
+    if not any(acc['id'] == account_id for acc in accounts):
+        return redirect(url_for('root'))
 
-    account_id = accounts[0]["id"]
     r = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/summary", verify=False)
     summary = r.json()
     
-    return render_template("dashboard.html", account=account, summary=summary)
-
-
-@app.route("/lookup")
-def lookup():
-    symbol = request.args.get('symbol', None)
-    stocks = []
-
-    if symbol is not None:
-        r = requests.get(f"{BASE_API_URL}/iserver/secdef/search?symbol={symbol}&name=true", verify=False)
-
-        response = r.json()
-        stocks = response
-
-    return render_template("lookup.html", stocks=stocks)
-
-
-@app.route("/contract/<contract_id>/<period>")
-def contract(contract_id, period='5d', bar='1d'):
-    data = {
-        "conids": [
-            contract_id
-        ]
-    }
-    
-    r = requests.post(f"{BASE_API_URL}/trsrv/secdef", data=data, verify=False)
-    contract = r.json()['secdef'][0]
-
-    r = requests.get(f"{BASE_API_URL}/iserver/marketdata/history?conid={contract_id}&period={period}&bar={bar}", verify=False)
-    price_history = r.json()
-
-    return render_template("contract.html", price_history=price_history, contract=contract)
-
+    return render_template("dashboard.html", accounts=accounts, selected_account=account_id, summary=summary)
 
 @app.route("/orders")
 def orders():
+    """Show orders across all accounts"""
+    accounts = get_accounts()
+    if not accounts:
+        return redirect(url_for('root'))
+
     r = requests.get(f"{BASE_API_URL}/iserver/account/orders", verify=False)
     orders = r.json()["orders"]
     
-    # place order code
-    return render_template("orders.html", orders=orders)
+    # Get selected account from query param if filtering by account
+    selected_account = request.args.get('account')
+    if selected_account and not any(acc['id'] == selected_account for acc in accounts):
+        selected_account = None
+        
+    return render_template("orders.html", orders=orders, accounts=accounts, selected_account=selected_account)
 
-
-@app.route("/order", methods=['POST'])
-def place_order():
-    print("== placing order ==")
+@app.route("/accounts/<account_id>/orders", methods=['POST'])
+def place_order(account_id):
+    """Place order for specific account"""
+    accounts = get_accounts()
+    if not accounts or not any(acc['id'] == account_id for acc in accounts):
+        return redirect(url_for('root'))
 
     data = {
         "orders": [
@@ -91,29 +84,75 @@ def place_order():
         ]
     }
 
-    r = requests.post(f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/orders", json=data, verify=False)
+    r = requests.post(f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data, verify=False)
+    return redirect(url_for('orders', account=account_id))
 
-    return redirect("/orders")
+@app.route("/accounts/<account_id>/orders/<order_id>", methods=['DELETE'])
+def cancel_order(account_id, order_id):
+    """Cancel specific order in an account"""
+    accounts = get_accounts()
+    if not accounts or not any(acc['id'] == account_id for acc in accounts):
+        return redirect(url_for('root'))
 
-@app.route("/orders/<order_id>/cancel")
-def cancel_order(order_id):
-    cancel_url = f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/order/{order_id}" 
+    cancel_url = f"{BASE_API_URL}/iserver/account/{account_id}/order/{order_id}" 
     r = requests.delete(cancel_url, verify=False)
-
     return r.json()
 
+@app.route("/positions")
+def positions():
+    """Show positions across all accounts or filtered by account"""
+    accounts = get_accounts()
+    if not accounts:
+        return redirect(url_for('root'))
 
-@app.route("/portfolio")
-def portfolio():
-    r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
+    # Get selected account from query param if filtering
+    selected_account = request.args.get('account')
+    if selected_account and not any(acc['id'] == selected_account for acc in accounts):
+        selected_account = None
 
-    if r.content:
-        positions = r.json()
+    positions = []
+    if selected_account:
+        r = requests.get(f"{BASE_API_URL}/portfolio/{selected_account}/positions/0", verify=False)
+        positions = r.json() if r.content else []
     else:
-        positions = []
+        # Aggregate positions from all accounts
+        for account in accounts:
+            r = requests.get(f"{BASE_API_URL}/portfolio/{account['id']}/positions/0", verify=False)
+            if r.content:
+                positions.extend(r.json())
 
-    # return my positions, how much cash i have in this account
-    return render_template("portfolio.html", positions=positions)
+    return render_template("positions.html", positions=positions, accounts=accounts, selected_account=selected_account)
+
+@app.route("/lookup")
+def lookup():
+    symbol = request.args.get('symbol', None)
+    stocks = []
+
+    if symbol is not None:
+        r = requests.get(f"{BASE_API_URL}/iserver/secdef/search?symbol={symbol}&name=true", verify=False)
+
+        response = r.json()
+        stocks = response
+
+    return render_template("lookup.html", stocks=stocks)
+
+@app.route("/contract/<contract_id>")
+def contract(contract_id):
+    data = {
+        "conids": [
+            contract_id
+        ]
+    }
+    
+    r = requests.post(f"{BASE_API_URL}/trsrv/secdef", data=data, verify=False)
+    contract = r.json()['secdef'][0]
+
+    period = request.args.get('period', '5d')
+    bar = request.args.get('bar', '1d')
+    r = requests.get(f"{BASE_API_URL}/iserver/marketdata/history?conid={contract_id}&period={period}&bar={bar}", verify=False)
+    price_history = r.json()
+
+    return render_template("contract.html", price_history=price_history, contract=contract)
 
 @app.route("/watchlists")
 def watchlists():
@@ -126,7 +165,6 @@ def watchlists():
         
     return render_template("watchlists.html", watchlists=watchlists)
 
-
 @app.route("/watchlists/<int:id>")
 def watchlist_detail(id):
     r = requests.get(f"{BASE_API_URL}/iserver/watchlist?id={id}", verify=False)
@@ -135,8 +173,7 @@ def watchlist_detail(id):
 
     return render_template("watchlist.html", watchlist=watchlist)
 
-
-@app.route("/watchlists/<int:id>/delete")
+@app.route("/watchlists/<int:id>/delete", methods=['POST'])
 def watchlist_delete(id):
     r = requests.delete(f"{BASE_API_URL}/iserver/watchlist?id={id}", verify=False)
 
