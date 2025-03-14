@@ -4,45 +4,38 @@
 
 <h2>Dashboard</h2>
 
-<div class="account-selector mb-4">
-    <form class="form-inline">
-        <label class="mr-2">Select Account:</label>
-        <select class="form-control" onchange="switchAccount(this.value);">
-            {% for acc in accounts %}
-            <option value="{{ acc.id }}" {% if acc.id == selected_account %}selected{% endif %}>
-                {{ acc.id }} ({{ acc.type }})
-            </option>
-            {% endfor %}
-        </select>
-    </form>
-</div>
-
-<script>
-function switchAccount(accountId) {
-    window.location.href = "{{ url_for('dashboard', account_id='ACCOUNT_ID') }}".replace('ACCOUNT_ID', accountId);
-}
-</script>
-
 <table class="table table-striped">
-    {% for acc in accounts %}
-        {% if acc.id == selected_account %}
-        <tr>
-            <td>Currency</td>
-            <td>{{ acc.currency }}</td>
-        </tr>
-        <tr>
-            <td>Account Type</td>
-            <td>{{ acc.type }}</td>
-        </tr>
-        <tr>
-            <td>Business Type</td>
-            <td>{{ acc.businessType }}</td>
-        </tr>
-        {% endif %}
-    {% endfor %}
     <tr>
-        <td>Cash</td>
-        <td>${{ summary['totalcashvalue']['amount']|round(2) }}</td>
+        <td>
+            Currency
+        </td>
+        <td>
+            {{ account.currency }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Account Type
+        </td>
+        <td>
+            {{ account.type }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Business Type
+        </td>
+        <td>
+            {{ account.businessType }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Cash
+        </td>
+        <td>
+            ${{ summary['totalcashvalue']['amount']|round(2) }}<br />
+        </td>
     </tr>
 </table>
 
