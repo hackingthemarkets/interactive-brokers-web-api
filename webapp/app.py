@@ -53,12 +53,7 @@ def currency_symbol(currency_code):
 def money_format(amount, currency_code='USD'):
     """Format a number as currency in US locale."""
     try:
-        # Try using locale first (better for US formatting)
-        if currency_code == 'USD':
-            return locale.currency(float(amount), grouping=True)
-        else:
-            # For non-USD, use Babel's formatting
-            return format_currency(amount, currency_code, locale='en_US')
+        return format_currency(amount, currency_code, locale='en_US')
     except (ValueError, TypeError, locale.Error):
         # Fallback to basic formatting if locale or Babel fails
         try:
@@ -162,19 +157,19 @@ def cancel_order(account_id, order_id):
 @require_auth
 def portfolio(accounts):
     all_positions = []
-    account_map = {account["id"]: account for account in accounts}
     
     for account in accounts:
         account_id = account["id"]
         r = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/positions/0", verify=False)
         if r.content:
             positions = r.json()
+            print(positions)
             for position in positions:
                 position['account_id'] = account_id
                 position['account'] = account
                 all_positions.append(position)
 
-    return render_template("portfolio.html", positions=all_positions, account_map=account_map)
+    return render_template("portfolio.html", positions=all_positions)
 
 @app.route("/watchlists")
 def watchlists():
