@@ -6,6 +6,7 @@
 
 <table class="table table-striped">
     <tr>
+        <th>Account</th>
         <th>Instrument</th>
         <th>Quantity</th>
         <th>Average Cost</th>
@@ -17,6 +18,9 @@
     {% for item in positions %}
     <tr>
         <td>
+            {{ item.account_id }}
+        </td>
+        <td>
             <strong>
                 <a href="/contract/{{ item['conid'] }}/365d">{{ item['name'] }}</a>
             </strong>
@@ -25,18 +29,18 @@
             {{ item['conid'] }}
         </td>
         <td>{{ item['position'] }}</td>
-        <td>${{ item['avgCost'] }}</td>
-        <td>${{ item['mktPrice']|round(2) }}</td>
-        <td>${{ item['mktValue'] }}</td>
+        <td>{{ item['avgCost']|money_format(item['currency']) }}</td>
+        <td>{{ item['mktPrice']|money_format(item['currency']) }}</td>
+        <td>{{ item['mktValue']|money_format(item['currency']) }}</td>
         <td class="pt-4">
             <span class="alert {% if item['unrealizedPnl'] >= 0 %}alert-success{% else %}alert-danger{% endif %}">
-                {{ item['unrealizedPnl'] }}
+                {{ item['unrealizedPnl']|money_format(item['currency']) }}
             </span>
         </td>
     </tr>
     {% else %}
     <tr>
-        <td colspan="6">No positions found</td>
+        <td colspan="7">No positions found</td>
     </tr>
     {% endfor %}
 </table>

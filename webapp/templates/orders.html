@@ -6,6 +6,7 @@
 
 <table class="table table-striped">
     <tr>
+        <th>Account</th>
         <th>Order ID</th>
         <th>Ticker</th>
         <th>Description</th>
@@ -17,6 +18,9 @@
     </tr>
     {% for order in orders %}
     <tr>
+        <td>
+            {{ order.acct }}
+        </td>
         <td>
             {{ order.orderId }}
         </td>
@@ -39,15 +43,48 @@
             {{ order.status }}   
         </td>
         <td>
-            <a href="/orders/{{ order.orderId }}/cancel" class="btn btn-light">x</a><br />
+            <button class="btn btn-light cancel-order" 
+                    data-account-id="{{ order.acct }}" 
+                    data-order-id="{{ order.orderId }}">x</button>
         </td>
     </tr>
     {% else %}
     <tr>
-        <td colspan="8">No active orders</td>
+        <td colspan="9">No active orders</td>
     </tr>
     {% endfor %}
-
 </table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cancelButtons = document.querySelectorAll('.cancel-order');
+        
+        cancelButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const accountId = this.getAttribute('data-account-id');
+                const orderId = this.getAttribute('data-order-id');
+                
+                if (confirm('Are you sure you want to cancel this order?')) {
+                    fetch(`/account/${accountId}/order/${orderId}`, {
+                        method: 'DELETE',
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert('Error canceling order: ' + data.error);
+                        } else {
+                            alert('Order canceled successfully');
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error canceling order');
+                    });
+                }
+            });
+        });
+    });
+</script>
 
 {% endblock %}

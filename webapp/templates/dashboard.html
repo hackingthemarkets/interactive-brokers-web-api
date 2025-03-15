@@ -4,39 +4,36 @@
 
 <h2>Dashboard</h2>
 
-<table class="table table-striped">
-    <tr>
-        <td>
-            Currency
-        </td>
-        <td>
-            {{ account.currency }}
-        </td>
-    </tr>
-    <tr>
-        <td>
-            Account Type
-        </td>
-        <td>
-            {{ account.type }}
-        </td>
-    </tr>
-    <tr>
-        <td>
-            Business Type
-        </td>
-        <td>
-            {{ account.businessType }}
-        </td>
-    </tr>
-    <tr>
-        <td>
-            Cash
-        </td>
-        <td>
-            ${{ summary['totalcashvalue']['amount']|round(2) }}<br />
-        </td>
-    </tr>
-</table>
+{% for account_data in account_summaries %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Account: {{ account_data.account.id }}</h3>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped">
+            <tr>
+                <td>Account Type</td>
+                <td>{{ account_data.account.type }}</td>
+            </tr>
+            <tr>
+                <td>Business Type</td>
+                <td>{{ account_data.account.businessType }}</td>
+            </tr>
+            <tr>
+                <td>Currency</td>
+                <td>{{ account_data.account.currency }}</td>
+            </tr>
+            <tr>
+                <td>Cash</td>
+                {% if account_data.summary.totalcashvalue is defined %}
+                <td>{{ account_data.summary.totalcashvalue.amount|money_format(account_data.summary.totalcashvalue.currency) }}</td>
+                {% else %}
+                <td>N/A</td>
+                {% endif %}
+            </tr>
+        </table>
+    </div>
+</div>
+{% endfor %}
 
 {% endblock %}

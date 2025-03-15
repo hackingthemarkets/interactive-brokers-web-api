@@ -11,22 +11,50 @@
         <img style="width: 100%" src="https://charts2-node.finviz.com/chart.ashx?cs=l&t={{ contract.ticker }}&tf=d&s=linear&ct=candle_stick&tm=d&o[0][ot]=sma&o[0][op]=50&o[0][oc]=FF8F33C6&o[1][ot]=sma&o[1][op]=200&o[1][oc]=DCB3326D&o[2][ot]=sma&o[2][op]=20&o[2][oc]=DC32B363&o[3][ot]=patterns&o[3][op]=&o[3][oc]=000" />
     </div>
 
-
     <div class="col col-sm-3">
         <h3>Order</h3>
-        <form action="/order" method="post">
-            Side
-            <select name="side" class="form-select">
-                <option value="BUY">Buy</option>
-                <option value="SELL">Sell</option>
-            </select>
-            Quantity
-            <input name="quantity" type="text" class="form-control" />
-            Price
-            <input name="price" type="text" class="form-control" />
-            <input name="contract_id" type="hidden" value="{{ contract.conid }}"/>
-            <input type="submit" class="mt-3 btn btn-primary" value="Place Limit Order" />
-        </form>
+        <div id="orderForm">
+            <form id="placeOrderForm" action="/order" method="post">
+                Account
+                <select name="account_id" class="form-select" required>
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">
+                        {{ account.id }}
+                    </option>
+                    {% endfor %}
+                </select>
+                Side
+                <select name="side" class="form-select">
+                    <option value="BUY">Buy</option>
+                    <option value="SELL">Sell</option>
+                </select>
+                Quantity
+                <input name="quantity" type="text" class="form-control" />
+                Price
+                <input name="price" type="text" class="form-control" />
+                <input name="contract_id" type="hidden" value="{{ contract.conid }}"/>
+                <button type="submit" class="mt-3 btn btn-primary">Place Limit Order</button>
+            </form>
+        </div>
+        
+        <!-- Confirmation dialog for order verification -->
+        <div id="orderConfirmation" class="mt-3" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5>Order Confirmation Required</h5>
+                </div>
+                <div class="card-body">
+                    <div id="confirmationMessages"></div>
+                    <div class="mt-3">
+                        <button id="confirmOrder" class="btn btn-success">Confirm</button>
+                        <button id="rejectOrder" class="btn btn-danger">Reject</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Error display -->
+        <div id="orderError" class="mt-3 alert alert-danger" style="display: none;"></div>
     </div>
 </div>
 
@@ -54,5 +82,150 @@
     </tr>
     {% endfor %}
 </table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const orderForm = document.getElementById('placeOrderForm');
+        const orderConfirmation = document.getElementById('orderConfirmation');
+        const confirmationMessages = document.getElementById('confirmationMessages');
+        const orderError = document.getElementById('orderError');
+        const confirmOrderBtn = document.getElementById('confirmOrder');
+        const rejectOrderBtn = document.getElementById('rejectOrder');
+        
+        let replyId = null;
+        
+        orderForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Reset UI elements
+            orderConfirmation.style.display = 'none';
+            orderError.style.display = 'none';
+            
+            // Get form data
+            const formData = new FormData(orderForm);
+            
+            // Convert FormData to JSON
+            const jsonData = {};
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
+            });
+            
+            // Submit the order
+            fetch('/order', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Order response:', data);
+                
+                if (data.error) {
+                    // Show error
+                    orderError.textContent = data.error;
+                    orderError.style.display = 'block';
+                } else if (Array.isArray(data) && data.length > 0) {
+                    const responseItem = data[0];
+                    
+                    if (responseItem.order_id) {
+                        // Order was successful, redirect to orders page
+                        window.location.href = '/orders';
+                    } else if (responseItem.id && responseItem.message) {
+                        // Order needs confirmation
+                        replyId = responseItem.id;
+                        
+                        // Display confirmation messages
+                        confirmationMessages.innerHTML = '';
+                        if (Array.isArray(responseItem.message)) {
+                            const messageList = document.createElement('ul');
+                            responseItem.message.forEach(msg => {
+                                const listItem = document.createElement('li');
+                                listItem.textContent = msg;
+                                messageList.appendChild(listItem);
+                            });
+                            confirmationMessages.appendChild(messageList);
+                        } else {
+                            confirmationMessages.textContent = responseItem.message;
+                        }
+                        
+                        // Show confirmation dialog
+                        orderConfirmation.style.display = 'block';
+                    } else {
+                        // Unknown response format
+                        orderError.textContent = 'Unexpected response from server: ' + JSON.stringify(data);
+                        orderError.style.display = 'block';
+                    }
+                } else {
+                    // Unknown response format
+                    orderError.textContent = 'Unexpected response from server: ' + JSON.stringify(data);
+                    orderError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                orderError.textContent = 'Error submitting order: ' + error.message;
+                orderError.style.display = 'block';
+            });
+        });
+        
+        // Handle order confirmation
+        confirmOrderBtn.addEventListener('click', function() {
+            if (!replyId) return;
+            
+            fetch(`/reply/${replyId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ confirmed: true })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Confirmation response:', data);
+                
+                if (data.order_id) {
+                    // Order was confirmed successfully, redirect to orders page
+                    window.location.href = '/orders';
+                } else {
+                    // Display the response
+                    orderConfirmation.style.display = 'none';
+                    orderError.textContent = 'Response: ' + JSON.stringify(data);
+                    orderError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                orderError.textContent = 'Error confirming order: ' + error.message;
+                orderError.style.display = 'block';
+            });
+        });
+        
+        // Handle order rejection
+        rejectOrderBtn.addEventListener('click', function() {
+            if (!replyId) return;
+            
+            fetch(`/reply/${replyId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ confirmed: false })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Rejection response:', data);
+                
+                // Display the response and hide confirmation dialog
+                orderConfirmation.style.display = 'none';
+                orderError.textContent = 'Order rejected: ' + JSON.stringify(data);
+                orderError.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                orderError.textContent = 'Error rejecting order: ' + error.message;
+                orderError.style.display = 'block';
+            });
+        });
+    });
+</script>
 
 {% endblock %}
