@@ -2,47 +2,62 @@
 
 {% block content %}
 
-<h2>Positions</h2>
+{% set grouped_positions = {} %}
+{% for item in positions %}
+    {% if item.account_id not in grouped_positions %}
+        {% set _ = grouped_positions.update({item.account_id: []}) %}
+    {% endif %}
+    {% set _ = grouped_positions[item.account_id].append(item) %}
+{% endfor %}
 
-<table class="table table-striped">
-    <tr>
-        <th>Account</th>
-        <th>Instrument</th>
-        <th>Quantity</th>
-        <th>Average Cost</th>
-        <th>Current Price</th>
-        <th>Current Value</th>
-        <th>Profit / Loss</th>
-    </tr>
-
-    {% for item in positions %}
-    <tr>
-        <td>
-            {{ item.account_id }}
-        </td>
-        <td>
-            <strong>
-                <a href="/contract/{{ item['conid'] }}/365d">{{ item['name'] }}</a>
-            </strong>
-            <br />
-            {{ item['contractDesc'] }}<br />
-            {{ item['conid'] }}
-        </td>
-        <td>{{ item['position'] }}</td>
-        <td>{{ item['avgCost']|money_format(item['currency']) }}</td>
-        <td>{{ item['mktPrice']|money_format(item['currency']) }}</td>
-        <td>{{ item['mktValue']|money_format(item['currency']) }}</td>
-        <td class="pt-4">
-            <span class="alert {% if item['unrealizedPnl'] >= 0 %}alert-success{% else %}alert-danger{% endif %}">
-                {{ item['unrealizedPnl']|money_format(item['currency']) }}
-            </span>
-        </td>
-    </tr>
-    {% else %}
-    <tr>
-        <td colspan="7">No positions found</td>
-    </tr>
-    {% endfor %}
-</table>
+{% for account_id, account_positions in grouped_positions.items() %}
+    {% set account = account_positions[0].account %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>
+                Positions of account {{ account_id }}
+            </h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Instrument</th>
+                        <th>Quantity</th>
+                        <th>Average Cost</th>
+                        <th>Current Price</th>
+                        <th>Current Value</th>
+                        <th>Profit / Loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in account_positions %}
+                    <tr>
+                        <td>
+                            <strong>
+                                <a href="/contract/{{ item['conid'] }}/365d">{{ item['name'] }}</a>
+                            </strong>
+                            <br />
+                            {{ item['contractDesc'] }}<br />
+                            {{ item['conid'] }}
+                        </td>
+                        <td>{{ item['position'] }}</td>
+                        <td>{{ item['avgCost']|money_format(item['currency']) }}</td>
+                        <td>{{ item['mktPrice']|money_format(item['currency']) }}</td>
+                        <td>{{ item['mktValue']|money_format(item['currency']) }}</td>
+                        <td class="pt-4">
+                            <span class="alert {% if item['unrealizedPnl'] >= 0 %}alert-success{% else %}alert-danger{% endif %}">
+                                {{ item['unrealizedPnl']|money_format(item['currency']) }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">No positions found</div>
+{% endfor %}
 
 {% endblock %}
