@@ -9,5 +9,5 @@ services:
     ports:
       - "5055:5055"
       - "5056:5056"
-    volumes:
-      - ./webapp:/app/webapp
+#    volumes:
+#      - ./webapp:/app/webapp
